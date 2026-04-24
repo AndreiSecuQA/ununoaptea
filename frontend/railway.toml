@@ -6,7 +6,8 @@ builder = "DOCKERFILE"
 dockerfilePath = "Dockerfile"
 
 [deploy]
-startCommand = "nginx -g 'daemon off;'"
+# No startCommand — let the Dockerfile CMD (/docker-entrypoint-railway.sh)
+# run so it can sed-substitute ${PORT} into the nginx config first.
 healthcheckPath = "/healthz"
 healthcheckTimeout = 30
 restartPolicyType = "ON_FAILURE"
