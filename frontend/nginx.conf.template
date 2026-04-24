@@ -2,7 +2,7 @@
 # (nginx:alpine auto-runs envsubst on /etc/nginx/templates/*.template)
 
 server {
-    listen       ${PORT};
+    listen       __PORT__;
     server_name  _;
     root         /usr/share/nginx/html;
     index        index.html;
