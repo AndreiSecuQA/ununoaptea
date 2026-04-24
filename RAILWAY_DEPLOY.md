@@ -8,27 +8,32 @@ Ghid pas-cu-pas. Presupune că ai un cont Railway (free tier OK pentru teste) ș
 
 Dacă vrei să arăți produsul fondatorului Unu Noaptea înainte de a intra în Stripe / S3 / Resend:
 
-**Servicii necesare:** doar `backend` + `frontend` + `PostgreSQL`. Nimic altceva.
+**Servicii necesare:** doar `ununoaptea-backend` + `ununoaptea-frontend` + `Postgres`. Nimic altceva.
 
-**Backend — variabile minime:**
+**Backend (`ununoaptea-backend`) — Root Directory: `backend`. Variables:**
 
 ```env
 APP_ENV=production
 APP_SECRET_KEY=<openssl rand -hex 32>
 DATABASE_URL=${{Postgres.DATABASE_URL}}
-FRONTEND_URL=https://${{frontend.RAILWAY_PUBLIC_DOMAIN}}
-API_BASE_URL=https://${{backend.RAILWAY_PUBLIC_DOMAIN}}
+FRONTEND_URL=https://${{ununoaptea-frontend.RAILWAY_PUBLIC_DOMAIN}}
+API_BASE_URL=https://${{ununoaptea-backend.RAILWAY_PUBLIC_DOMAIN}}
 DEMO_MODE=true
 EMAIL_PROVIDER=console
 ADMIN_EMAIL=andrei.s3cu@gmail.com
 ```
 
-**Frontend — variabile minime:**
+**Frontend (`ununoaptea-frontend`) — Root Directory: `frontend`. Variables:**
 
 ```env
-VITE_API_URL=https://${{backend.RAILWAY_PUBLIC_DOMAIN}}
+VITE_API_URL=https://${{ununoaptea-backend.RAILWAY_PUBLIC_DOMAIN}}
 VITE_DEMO_MODE=true
 ```
+
+**Reguli:**
+- `${{<service-name>.RAILWAY_PUBLIC_DOMAIN}}` — service name exact (cu cratimă).
+- Ambele servicii trebuie să aibă **Generate Domain** activat înainte de primul build (frontend-ul are nevoie de domain-ul backend-ului baked în bundle).
+- `VITE_*` sunt build-time — orice modificare cere **Redeploy frontend**.
 
 **Cum funcționează demo-ul:**
 
@@ -122,7 +127,7 @@ Noi folosim `DATABASE_URL`. Prefix-ul vine `postgresql://` — backend-ul îl co
 APP_ENV=production
 APP_SECRET_KEY=<openssl rand -hex 32>
 DATABASE_URL=${{Postgres.DATABASE_URL}}
-FRONTEND_URL=https://${{frontend.RAILWAY_PUBLIC_DOMAIN}}
+FRONTEND_URL=https://${{ununoaptea-frontend.RAILWAY_PUBLIC_DOMAIN}}
 CORS_EXTRA_ORIGINS=
 
 # Stripe (live sau test — vezi Stripe dashboard)
@@ -185,7 +190,7 @@ Lipește rezultatul în `ADMIN_PASSWORD_HASH`.
 3. **Variables:**
 
 ```env
-VITE_API_URL=https://${{backend.RAILWAY_PUBLIC_DOMAIN}}
+VITE_API_URL=https://${{ununoaptea-backend.RAILWAY_PUBLIC_DOMAIN}}
 ```
 
 > **Important:** `VITE_API_URL` e build-time (baked în bundle). Orice schimbare cere un redeploy.
@@ -199,7 +204,7 @@ După ce ambele servicii au domeniu public:
 - Backend `FRONTEND_URL` → pointează la frontend domain.
 - Frontend `VITE_API_URL` → pointează la backend domain.
 
-Dacă folosești referințe `${{frontend.RAILWAY_PUBLIC_DOMAIN}}` / `${{backend.RAILWAY_PUBLIC_DOMAIN}}`, Railway le rezolvă automat.
+Dacă folosești referințe `${{ununoaptea-frontend.RAILWAY_PUBLIC_DOMAIN}}` / `${{ununoaptea-backend.RAILWAY_PUBLIC_DOMAIN}}`, Railway le rezolvă automat.
 
 ---
 
