@@ -52,6 +52,10 @@ app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)  # ty
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origins,
+    # Also match any Railway public domain so the demo frontend works without
+    # the deployer having to set FRONTEND_URL by hand. Safe for this project:
+    # the API has no unauthenticated destructive endpoints.
+    allow_origin_regex=r"https://.*\.up\.railway\.app",
     allow_credentials=True,
     allow_methods=["GET", "POST", "DELETE", "OPTIONS"],
     allow_headers=["*"],
