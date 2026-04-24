@@ -10,3 +10,7 @@ os.environ.setdefault(
     "postgresql+asyncpg://test:test@localhost/test_unu_noaptea",
 )
 os.environ.setdefault("EMAIL_PROVIDER", "console")
+# Tests exercise the full Stripe checkout flow by default; DEMO_MODE bypass
+# is covered in its own dedicated test. Explicitly disable here so the
+# production-safe default (DEMO_MODE=True) doesn't flip existing assertions.
+os.environ.setdefault("DEMO_MODE", "false")

@@ -16,6 +16,20 @@ else
   echo "   DATABASE_URL=MISSING"
 fi
 
+# Detect the .env.example placeholder leaking into Railway config. Railway's
+# "Suggested Variables" feature will copy it verbatim if the user clicks
+# Apply — fail fast with a bright error instead of waiting for DNS timeouts.
+case "${DATABASE_URL}" in
+  *"user:pass@db:5432"*|*"user:pass@localhost"*)
+    echo ""
+    echo "!! DATABASE_URL is the .env.example PLACEHOLDER ('user:pass@db:...')."
+    echo "!! In Railway, open the backend service → Variables, and set"
+    echo "!!   DATABASE_URL=\${{Postgres.DATABASE_URL}}"
+    echo "!! (reference variable, not a literal). Then redeploy."
+    echo ""
+    ;;
+esac
+
 echo ">> alembic upgrade head"
 if ! alembic upgrade head; then
   echo ""
