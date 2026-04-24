@@ -1,0 +1,54 @@
+# Env
+.env
+.env.*
+!.env.example
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+.venv/
+.venv2/
+venv/
+env/
+*.egg-info/
+dist/
+build/
+.pytest_cache/
+pytest-cache-files-*/
+.mypy_cache/
+.ruff_cache/
+htmlcov/
+.coverage
+*.db
+*.sqlite
+
+# Node
+node_modules/
+.vite/
+.cache/
+.parcel-cache/
+dist/
+dist2/
+dist3/
+dist_new/
+.turbo/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+.DS_Store
+
+# Logs
+*.log
+logs/
+
+# Build artifacts
+*.pdf
+!backend/app/assets/**/*.pdf
+
+# Docker volumes
+db_data/

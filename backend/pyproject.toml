@@ -1,0 +1,32 @@
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+src = ["app", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM", "N"]
+ignore = [
+    "E501",   # line length handled by formatter
+    "B008",   # FastAPI uses Depends() in argument defaults — idiomatic
+    "B904",   # raise ... from err inside except — too noisy for user-facing APIs
+    "UP017",  # `datetime.UTC` alias is 3.11+; keep `timezone.utc` for 3.10 dev
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["B011", "B017", "N806"]
+"alembic/*" = ["N806"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["app"]
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+ignore_missing_imports = true
+exclude = ["alembic/versions"]
+
+[[tool.mypy.overrides]]
+module = "app.services.s3_service"
+# boto3.client() has thousands of Literal overloads that explode mypy output
+# without adding value — we already type the wrapper functions as Any.
+disable_error_code = ["call-overload"]

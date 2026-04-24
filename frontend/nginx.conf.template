@@ -1,0 +1,47 @@
+# nginx config template — envsubst fills in ${PORT} at container start.
+# (nginx:alpine auto-runs envsubst on /etc/nginx/templates/*.template)
+
+server {
+    listen       ${PORT};
+    server_name  _;
+    root         /usr/share/nginx/html;
+    index        index.html;
+
+    # Security + performance headers
+    add_header X-Frame-Options "SAMEORIGIN" always;
+    add_header X-Content-Type-Options "nosniff" always;
+    add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+
+    # gzip
+    gzip on;
+    gzip_vary on;
+    gzip_min_length 1024;
+    gzip_types text/plain text/css application/json application/javascript text/xml application/xml application/xml+rss text/javascript image/svg+xml;
+
+    # Long-cache immutable assets (Vite fingerprints filenames).
+    location /assets/ {
+        expires 1y;
+        add_header Cache-Control "public, immutable";
+        try_files $uri =404;
+    }
+
+    # Fonts / favicons — medium cache.
+    location ~* \.(woff2?|ttf|eot|svg|ico|png|jpg|jpeg|gif)$ {
+        expires 7d;
+        add_header Cache-Control "public";
+        try_files $uri =404;
+    }
+
+    # SPA fallback — every non-file route serves index.html so React Router
+    # can handle /wizard, /orders/:id/status, /privacy etc.
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+
+    # Simple healthcheck for Railway probes.
+    location = /healthz {
+        access_log off;
+        return 200 "ok\n";
+        add_header Content-Type text/plain;
+    }
+}

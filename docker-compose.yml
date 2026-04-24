@@ -1,0 +1,57 @@
+services:
+  api:
+    build: ./backend
+    container_name: unu-noaptea-api
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+    env_file: .env
+    volumes:
+      - ./backend/app:/app/app
+      - ./backend/alembic:/app/alembic
+      - ./backend/alembic.ini:/app/alembic.ini
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+
+  frontend:
+    build: ./frontend
+    container_name: unu-noaptea-frontend
+    ports:
+      - "5173:5173"
+    environment:
+      VITE_API_URL: http://localhost:8000
+    volumes:
+      - ./frontend/src:/app/src
+      - ./frontend/public:/app/public
+      - ./frontend/index.html:/app/index.html
+    command: npm run dev -- --host 0.0.0.0
+
+  db:
+    image: postgres:15-alpine
+    container_name: unu-noaptea-db
+    environment:
+      POSTGRES_DB: unu_noaptea
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: pass
+    ports:
+      - "5432:5432"
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "user", "-d", "unu_noaptea"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  stripe-listener:
+    image: stripe/stripe-cli:latest
+    container_name: unu-noaptea-stripe-listener
+    depends_on: [api]
+    command: >
+      listen --forward-to api:8000/api/v1/webhooks/stripe
+    env_file: .env.stripe
+    profiles: ["stripe"]
+
+volumes:
+  db_data:

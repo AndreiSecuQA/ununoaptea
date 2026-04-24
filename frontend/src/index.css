@@ -1,0 +1,60 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    color-scheme: light;
+  }
+  html,
+  body,
+  #root {
+    min-height: 100%;
+  }
+  body {
+    font-family: "Inter", -apple-system, BlinkMacSystemFont, sans-serif;
+  }
+  h1,
+  h2,
+  h3,
+  .serif {
+    font-family: "EB Garamond", Georgia, serif;
+  }
+  button:focus-visible,
+  input:focus-visible,
+  textarea:focus-visible,
+  select:focus-visible,
+  [role="button"]:focus-visible {
+    outline: 2px solid #8b7355;
+    outline-offset: 2px;
+  }
+}
+
+@layer components {
+  .btn-primary {
+    @apply inline-flex items-center justify-center bg-ink text-cream
+           px-5 py-3 rounded-md text-sm font-medium
+           hover:bg-accent transition-colors
+           disabled:opacity-40 disabled:cursor-not-allowed;
+  }
+  .btn-secondary {
+    @apply inline-flex items-center justify-center border border-ink text-ink
+           px-5 py-3 rounded-md text-sm font-medium
+           hover:bg-ink hover:text-cream transition-colors;
+  }
+  .input-text {
+    @apply w-full border border-ink/20 rounded-md px-4 py-3 text-base
+           focus:border-accent focus:ring-0 outline-none transition-colors;
+  }
+  .label-lg {
+    @apply block text-sm text-muted mb-2 font-medium tracking-wide uppercase;
+  }
+  .chip {
+    @apply inline-flex items-center px-3 py-1.5 rounded-full text-sm
+           border border-ink/20 hover:border-accent cursor-pointer
+           transition-colors select-none;
+  }
+  .chip-active {
+    @apply bg-ink text-cream border-ink;
+  }
+}
