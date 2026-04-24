@@ -5,7 +5,25 @@ import type {
   OrderStatusResponse,
 } from "@/types/calendar.types";
 
-const API_URL = (import.meta.env.VITE_API_URL as string) || "http://localhost:8000";
+// If VITE_API_URL isn't set at build time, fall back to:
+//   - localhost:8000 in dev
+//   - the frontend's own origin with `-backend` swapped for `-frontend` in prod
+//     (Railway convention when services are named <app>-backend/<app>-frontend).
+function resolveApiUrl(): string {
+  const explicit = import.meta.env.VITE_API_URL as string | undefined;
+  if (explicit && explicit.length > 0) return explicit;
+  if (import.meta.env.DEV) return "http://localhost:8000";
+  if (typeof window !== "undefined") {
+    const host = window.location.hostname;
+    // Heuristic: if hostname contains "-frontend", swap to "-backend".
+    if (host.includes("-frontend")) {
+      return `${window.location.protocol}//${host.replace("-frontend", "-backend")}`;
+    }
+  }
+  return "";
+}
+
+const API_URL = resolveApiUrl();
 
 export const api = axios.create({
   baseURL: `${API_URL}/api/v1`,

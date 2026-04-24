@@ -13,9 +13,9 @@ import type {
 const EMAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
 
 // Demo mode: skips Stripe. The backend generates a real PDF and the
-// "checkout_url" returned is actually the order status page. Toggled by
-// Vite env var: `VITE_DEMO_MODE=true` at build time.
-const DEMO_MODE = import.meta.env.VITE_DEMO_MODE === "true";
+// "checkout_url" returned is actually the order status page. Default ON —
+// to run with real Stripe checkout, set VITE_DEMO_MODE=false at build time.
+const DEMO_MODE = import.meta.env.VITE_DEMO_MODE !== "false";
 
 export default function Step7_Payment() {
   const email = useWizardState((s) => s.email);
