@@ -9,7 +9,10 @@ dockerfilePath = "Dockerfile"
 [deploy]
 startCommand = "./start.sh"
 healthcheckPath = "/api/v1/health"
-healthcheckTimeout = 60
+# 60s was tight when SQLAlchemy echo flooded stdout during create_all on cold
+# starts. Echo is now opt-in (SQL_ECHO=1), but keep a generous timeout so a
+# slow-pulling Postgres or first-time alembic migration doesn't fail the deploy.
+healthcheckTimeout = 300
 restartPolicyType = "ON_FAILURE"
 restartPolicyMaxRetries = 5
 numReplicas = 1
