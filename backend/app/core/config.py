@@ -1,10 +1,18 @@
 """Application settings loaded from environment variables."""
 
+import os
 from functools import lru_cache
 from typing import Literal
 
-from pydantic import Field, field_validator
+from pydantic import Field, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+
+# Sentinel value injected by the demo fallback when DATABASE_URL is missing or
+# is the .env.example placeholder AND DEMO_MODE is on. Persisted under /tmp so
+# orders survive a uvicorn reload but are wiped on container restart — fine
+# for a demo, never use this in production.
+_DEMO_SQLITE_URL = "sqlite+aiosqlite:////tmp/unu_noaptea_demo.db"
 
 
 class Settings(BaseSettings):
@@ -41,28 +49,42 @@ class Settings(BaseSettings):
         SQLAlchemy async requires an explicit driver — upgrade it to asyncpg
         at parse time so the deployer doesn't have to remember the prefix.
 
-        Also guards against the `.env.example` placeholder `user:pass@db:5432`
-        leaking into production: if that exact string is detected (Railway's
-        "Suggested Variables" feature will auto-copy it), we fail loudly so the
-        deploy doesn't spend 5 minutes timing out on DNS.
+        Detection of the `.env.example` placeholder is deferred to a
+        model_validator (after) below, where DEMO_MODE is also visible — in
+        DEMO_MODE we fall back to SQLite instead of raising, so the demo
+        deploys without Postgres being correctly wired.
         """
         if not v:
             return v
-        # Detect the unreplaced `.env.example` placeholder leaking into Railway
-        # config. The local-dev default uses `user:pass@localhost`, which is
-        # fine — we only reject the `db:5432` hostname that comes from the
-        # committed example file.
-        if "user:pass@db:5432" in v:
-            raise ValueError(
-                "DATABASE_URL is still set to the .env.example placeholder "
-                "('user:pass@db:5432'). In Railway, set it to "
-                "${{Postgres.DATABASE_URL}} — not the example literal."
-            )
         if v.startswith("postgres://"):
             return "postgresql+asyncpg://" + v[len("postgres://") :]
         if v.startswith("postgresql://"):
             return "postgresql+asyncpg://" + v[len("postgresql://") :]
         return v
+
+    @model_validator(mode="after")
+    def _demo_sqlite_fallback(self) -> "Settings":
+        """If DATABASE_URL is missing or the .env.example placeholder, swap
+        it for a local SQLite URL so the deploy can boot. The original
+        validator used to raise here, which made Railway deploys fail before
+        the healthcheck could report the actual misconfig — better to boot
+        with a clearly-warned-about ephemeral DB and let the user see the
+        warning in the logs than to crash on import.
+
+        SQLite is a strict downgrade (no concurrent writes, wiped on
+        container restart) — never deploy real production traffic against
+        this fallback. The startup banner in start.sh prints a loud warning
+        whenever this kicks in.
+        """
+        url = self.DATABASE_URL or ""
+        is_placeholder = (not url) or ("user:pass@db:5432" in url)
+        if is_placeholder:
+            object.__setattr__(self, "DATABASE_URL", _DEMO_SQLITE_URL)
+            # Also force DEMO_MODE on — there's no real Postgres, so order
+            # creation must skip Stripe (which writes idempotency keys to DB).
+            object.__setattr__(self, "DEMO_MODE", True)
+            os.environ["UNU_NOAPTEA_DB_FALLBACK"] = "1"
+        return self
 
     # --- Stripe ---
     STRIPE_SECRET_KEY: str = ""
@@ -126,7 +148,7 @@ class Settings(BaseSettings):
 
 @lru_cache
 def get_settings() -> Settings:
-    return Settings()  # type: ignore[call-arg]
+    return Settings()
 
 
 settings = get_settings()

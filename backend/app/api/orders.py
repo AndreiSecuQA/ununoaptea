@@ -109,6 +109,7 @@ async def create_order(
 @router.get("/{order_id}/status", response_model=OrderStatusResponse)
 async def get_order_status(
     order_id: UUID,
+    request: Request,
     db: AsyncSession = Depends(get_db),
 ) -> OrderStatusResponse:
     """Status polled by frontend every 3s. No download URL here — use token flow."""
@@ -126,11 +127,18 @@ async def get_order_status(
 
     # Demo mode surfaces the signed download URL directly in the status
     # payload so the founder doesn't have to wait for the email to arrive.
+    # Prefer the configured API_BASE_URL but fall back to the request's own
+    # scheme+host so Railway deploys work without API_BASE_URL being set.
     download_url = None
     if settings.DEMO_MODE and order.status == OrderStatus.READY:
         token = create_download_token(order.id, order.email)
+        configured = settings.API_BASE_URL.rstrip("/")
+        if configured and "localhost" not in configured:
+            base = configured
+        else:
+            base = str(request.base_url).rstrip("/")
         download_url = (
-            f"{settings.API_BASE_URL}/api/v1/orders/{order.id}/download?token={token}"
+            f"{base}/api/v1/orders/{order.id}/download?token={token}"
         )
 
     return OrderStatusResponse(

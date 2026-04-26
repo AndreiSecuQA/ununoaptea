@@ -32,7 +32,29 @@ limiter = Limiter(key_func=get_remote_address)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
-    log.info("app.startup", env=settings.APP_ENV)
+    log.info(
+        "app.startup",
+        env=settings.APP_ENV,
+        demo_mode=settings.DEMO_MODE,
+        db_dialect=settings.DATABASE_URL.split("://", 1)[0],
+    )
+    # Auto-create schema on SQLite — alembic's initial migration uses
+    # Postgres-only types (JSONB, native UUID, server_default sa.false()),
+    # which SQLite rejects. The model definitions are portable via
+    # `with_variant`, so create_all() is the safe path on SQLite.
+    if settings.DATABASE_URL.startswith("sqlite"):
+        from app import models  # noqa: F401  (registers ORM models on Base.metadata)
+        from app.db.base import Base
+        from app.db.session import engine
+
+        async with engine.begin() as conn:
+            await conn.run_sync(Base.metadata.create_all)
+        log.warning(
+            "app.startup.sqlite_fallback",
+            reason="DATABASE_URL was missing/placeholder — running on ephemeral SQLite. "
+            "Data WILL be wiped on container restart. Set DATABASE_URL to a real "
+            "Postgres URL (Railway: ${{Postgres.DATABASE_URL}}) for persistence.",
+        )
     yield
     log.info("app.shutdown")
 

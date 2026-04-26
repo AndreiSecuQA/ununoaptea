@@ -9,6 +9,9 @@ python-multipart==0.0.9
 # --- DB ---
 sqlalchemy[asyncio]==2.0.35
 asyncpg==0.29.0
+# aiosqlite powers the demo fallback when DATABASE_URL is missing/placeholder.
+# Tiny dep — keep it in prod requirements so the fallback works on Railway too.
+aiosqlite==0.20.0
 alembic==1.13.2
 
 # --- Auth & security ---

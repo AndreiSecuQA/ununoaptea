@@ -9,12 +9,15 @@ from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.base import Base
 
+# SQLite has no native UUID — use String(36) variant so demo deploys work.
+_UUID_PORTABLE = UUID(as_uuid=True).with_variant(String(36), "sqlite")
+
 
 class AdminUser(Base):
     __tablename__ = "admin_users"
 
     id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True),
+        _UUID_PORTABLE,
         primary_key=True,
         default=uuid.uuid4,
     )
