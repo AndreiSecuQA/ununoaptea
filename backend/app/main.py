@@ -49,17 +49,34 @@ app = FastAPI(
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)  # type: ignore[arg-type]
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=settings.cors_origins,
-    # Also match any Railway public domain so the demo frontend works without
-    # the deployer having to set FRONTEND_URL by hand. Safe for this project:
-    # the API has no unauthenticated destructive endpoints.
-    allow_origin_regex=r"https://.*\.up\.railway\.app",
-    allow_credentials=True,
-    allow_methods=["GET", "POST", "DELETE", "OPTIONS"],
-    allow_headers=["*"],
-)
+# In DEMO_MODE we allow any origin (the demo is meant to be reachable from
+# any preview URL — Railway, Vercel, custom domains, browser extensions, etc.).
+# `allow_credentials` MUST be False when allow_origins contains "*" per spec;
+# the demo doesn't need cookies anyway.
+if settings.DEMO_MODE:
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=["*"],
+        allow_credentials=False,
+        allow_methods=["*"],
+        allow_headers=["*"],
+        expose_headers=["x-request-id"],
+        max_age=600,
+    )
+else:
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=settings.cors_origins,
+        # Also match any Railway public domain so the demo frontend works
+        # without the deployer having to set FRONTEND_URL by hand. Safe for
+        # this project: the API has no unauthenticated destructive endpoints.
+        allow_origin_regex=r"https://.*\.(up\.railway\.app|vercel\.app|netlify\.app)",
+        allow_credentials=True,
+        allow_methods=["GET", "POST", "DELETE", "OPTIONS"],
+        allow_headers=["*"],
+        expose_headers=["x-request-id"],
+        max_age=600,
+    )
 
 
 @app.middleware("http")

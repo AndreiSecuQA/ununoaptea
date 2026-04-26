@@ -4,7 +4,7 @@ import WizardNav from "./WizardNav";
 import TextField from "@/components/ui/TextField";
 import LegalModal from "@/components/ui/LegalModal";
 import { useWizardState } from "@/hooks/useWizardState";
-import { createOrder } from "@/services/api";
+import { API_URL, checkBackendHealth, createOrder } from "@/services/api";
 import type {
   CalendarConfig,
   OrderCreateRequest,
@@ -49,6 +49,12 @@ export default function Step7_Payment() {
       ) {
         throw new Error("Configurația nu e completă. Întoarce-te la pașii anteriori.");
       }
+      // Probe the backend first so a misconfigured deployment gives a
+      // diagnostic message instead of an opaque "Network Error".
+      const healthErr = await checkBackendHealth();
+      if (healthErr) {
+        throw new Error(healthErr);
+      }
       const payload: OrderCreateRequest = {
         calendar_config: cfg,
         email,
@@ -57,14 +63,22 @@ export default function Step7_Payment() {
         withdrawal_waiver: consents.withdrawal,
       };
       const { checkout_url } = await createOrder(payload);
-      // Redirect to Stripe Checkout
+      // Redirect to Stripe Checkout (or the demo status page).
       window.location.href = checkout_url;
     } catch (e) {
-      const anyErr = e as { response?: { data?: { detail?: string } }; message?: string };
-      setErr(
+      const anyErr = e as {
+        response?: { data?: { detail?: string }; status?: number };
+        message?: string;
+      };
+      const detail =
         anyErr.response?.data?.detail ??
-          anyErr.message ??
-          "Ceva n-a mers. Încearcă din nou."
+        anyErr.message ??
+        "Ceva n-a mers. Încearcă din nou.";
+      const isNetwork = anyErr.message === "Network Error" || !anyErr.response;
+      setErr(
+        isNetwork
+          ? `${detail}${API_URL ? ` (API: ${API_URL})` : ""}`
+          : detail
       );
       setSubmitting(false);
     }
