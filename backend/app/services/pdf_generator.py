@@ -74,14 +74,28 @@ _FONT_INTER_BOLD = "Inter-Bold"
 
 _fonts_registered = False
 
+# System-installed DejaVu paths (Debian/Alpine/Ubuntu — installed in the
+# Dockerfile via fonts-dejavu). DejaVu has full Latin Extended-A coverage so
+# Romanian diacritics (ă, ș, ț, Ă, Ș, Ț) render correctly. Used as a fallback
+# when the bundled EB Garamond / Inter TTFs aren't shipped with the repo.
+_DEJAVU_DIR = Path("/usr/share/fonts/truetype/dejavu")
+_DEJAVU_FALLBACKS = {
+    _FONT_GARAMOND_REG: "DejaVuSerif.ttf",
+    _FONT_GARAMOND_BOLD: "DejaVuSerif-Bold.ttf",
+    _FONT_GARAMOND_ITALIC: "DejaVuSerif-Italic.ttf",
+    _FONT_INTER_REG: "DejaVuSans.ttf",
+    _FONT_INTER_MED: "DejaVuSans.ttf",  # DejaVu has no Medium — Regular is fine
+    _FONT_INTER_BOLD: "DejaVuSans-Bold.ttf",
+}
+
 
 def _register_fonts() -> None:
-    """Attempt to register bundled TTFs; fall back to Helvetica/Times aliases."""
+    """Register bundled TTFs first, then DejaVu system fonts as fallback."""
     global _fonts_registered
     if _fonts_registered:
         return
 
-    font_files = {
+    bundled = {
         _FONT_GARAMOND_REG: "EBGaramond-Regular.ttf",
         _FONT_GARAMOND_BOLD: "EBGaramond-Bold.ttf",
         _FONT_GARAMOND_ITALIC: "EBGaramond-Italic.ttf",
@@ -89,17 +103,21 @@ def _register_fonts() -> None:
         _FONT_INTER_MED: "Inter-Medium.ttf",
         _FONT_INTER_BOLD: "Inter-Bold.ttf",
     }
-    for name, filename in font_files.items():
-        path = FONTS_DIR / filename
+    for name, filename in bundled.items():
+        bundled_path = FONTS_DIR / filename
+        dejavu_path = _DEJAVU_DIR / _DEJAVU_FALLBACKS.get(name, "")
+        chosen: Path | None = None
+        if bundled_path.exists():
+            chosen = bundled_path
+        elif dejavu_path.exists():
+            chosen = dejavu_path
+        if chosen is None:
+            # No TTF available — _font() will resolve to a Type-1 built-in.
+            # Romanian diacritics will be missing on this path, but the PDF
+            # still generates.
+            continue
         try:
-            if path.exists():
-                pdfmetrics.registerFont(TTFont(name, str(path)))
-            else:
-                # Fallback: register the name as an alias to a built-in.
-                # ReportLab can't alias by registerFont, so we leave these
-                # unregistered and the renderer will call _font() which resolves
-                # missing fonts to built-ins.
-                pass
+            pdfmetrics.registerFont(TTFont(name, str(chosen)))
         except Exception as e:  # pragma: no cover
             log.warning("font.register_failed", font=name, error=str(e))
     _fonts_registered = True

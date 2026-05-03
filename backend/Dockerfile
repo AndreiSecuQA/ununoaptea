@@ -7,13 +7,17 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 WORKDIR /app
 
-# System deps for reportlab (fonts, image libs) + health checks
+# System deps for reportlab (fonts, image libs) + health checks.
+# fonts-dejavu gives us DejaVu Serif + Sans with full Unicode coverage —
+# without it, ReportLab falls back to Helvetica/Times which lack Romanian
+# Extended-A glyphs (ă, ș, ț) and renders them as black squares.
 RUN apt-get update && apt-get install -y --no-install-recommends \
       build-essential \
       libjpeg-dev \
       libfreetype6-dev \
       libpng-dev \
       curl \
+      fonts-dejavu \
     && rm -rf /var/lib/apt/lists/*
 
 COPY requirements.txt .
