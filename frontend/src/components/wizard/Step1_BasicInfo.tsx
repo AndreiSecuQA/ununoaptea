@@ -1,15 +1,29 @@
 import { useState } from "react";
 import TextField from "@/components/ui/TextField";
-import DatePickerCustom from "@/components/ui/DatePickerCustom";
 import WizardNav from "./WizardNav";
 import { useWizardState } from "@/hooks/useWizardState";
 
 const NAME_RE = /^[a-zA-ZăâîșțĂÂÎȘȚ][a-zA-ZăâîșțĂÂÎȘȚ\s-]*$/;
 
-function todayISO(offsetDays = 0): string {
-  const d = new Date();
-  d.setDate(d.getDate() + offsetDays);
-  return d.toISOString().slice(0, 10);
+// The calendar always covers a full Jan 1 → Dec 31 of one year. We let the
+// user pick which year up front so Step 2 (special days) can offer a real
+// date picker scoped to that single year — much easier than spinning through
+// month/day dropdowns separately.
+function yearChoices(): number[] {
+  const now = new Date();
+  const currentYear = now.getFullYear();
+  // If we're already past September, the current year only has ~3 months
+  // left and is a poor "calendar of the year" choice — skip it.
+  const offerCurrent = now.getMonth() < 9;
+  return offerCurrent
+    ? [currentYear, currentYear + 1, currentYear + 2]
+    : [currentYear + 1, currentYear + 2];
+}
+
+function yearFromStartDate(s: string | undefined): number | null {
+  if (!s) return null;
+  const m = /^(\d{4})-/.exec(s);
+  return m ? Number(m[1]) : null;
 }
 
 export default function Step1_BasicInfo() {
@@ -21,6 +35,7 @@ export default function Step1_BasicInfo() {
 
   const firstName = data.first_name ?? "";
   const startDate = data.start_date ?? "";
+  const selectedYear = yearFromStartDate(startDate);
 
   function validateName(v: string) {
     if (v.length === 0) return "Adaugă prenumele tău.";
@@ -29,7 +44,11 @@ export default function Step1_BasicInfo() {
     return null;
   }
 
-  const canContinue = !validateName(firstName) && !!startDate;
+  const canContinue = !validateName(firstName) && !!selectedYear;
+
+  function pickYear(y: number) {
+    setField("start_date", `${y}-01-01`);
+  }
 
   function onContinue() {
     const err = validateName(firstName);
@@ -40,8 +59,7 @@ export default function Step1_BasicInfo() {
     next();
   }
 
-  const minDate = todayISO();
-  const maxDate = todayISO(540);
+  const choices = yearChoices();
 
   return (
     <section className="max-w-xl">
@@ -50,7 +68,7 @@ export default function Step1_BasicInfo() {
         Numele tău apare pe fiecare pagină din calendar — un salut personal zilnic.
       </p>
 
-      <div className="space-y-6">
+      <div className="space-y-8">
         <TextField
           label="Prenumele tău"
           placeholder="Ana, Andrei, Mihai…"
@@ -65,38 +83,35 @@ export default function Step1_BasicInfo() {
           autoFocus
         />
 
-        <DatePickerCustom
-          label="Când vrei să înceapă calendarul tău?"
-          value={startDate}
-          min={minDate}
-          max={maxDate}
-          onChange={(v) => setField("start_date", v)}
-          required
-        />
-        <div className="flex flex-wrap gap-2">
-          <button
-            type="button"
-            className="chip"
-            onClick={() => setField("start_date", todayISO())}
-          >
-            Azi
-          </button>
-          <button
-            type="button"
-            className="chip"
-            onClick={() => {
-              const nextYear = new Date().getFullYear() + 1;
-              setField("start_date", `${nextYear}-01-01`);
-            }}
-          >
-            1 Ianuarie {new Date().getFullYear() + 1}
-          </button>
+        <div>
+          <p className="label-lg mb-3">Pentru ce an vrei calendarul?</p>
+          <div className="grid grid-cols-3 gap-2">
+            {choices.map((y) => {
+              const active = selectedYear === y;
+              return (
+                <button
+                  key={y}
+                  type="button"
+                  onClick={() => pickYear(y)}
+                  className={`px-4 py-3 rounded-md border text-base font-medium transition ${
+                    active
+                      ? "border-ink bg-ink text-cream"
+                      : "border-ink/20 bg-white text-ink hover:border-ink/50"
+                  }`}
+                  aria-pressed={active}
+                >
+                  {y}
+                </button>
+              );
+            })}
+          </div>
+          {selectedYear && (
+            <p className="text-xs text-muted mt-3">
+              Calendarul tău: 1 ianuarie {selectedYear} → 31 decembrie{" "}
+              {selectedYear}.
+            </p>
+          )}
         </div>
-        {startDate && (
-          <p className="text-xs text-muted">
-            Calendarul acoperă 365 de zile de la această dată.
-          </p>
-        )}
       </div>
 
       <WizardNav
