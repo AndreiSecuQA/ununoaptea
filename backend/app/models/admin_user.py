@@ -4,20 +4,17 @@ import uuid
 from datetime import datetime
 
 from sqlalchemy import DateTime, String, func
-from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.base import Base
-
-# SQLite has no native UUID — use String(36) variant so demo deploys work.
-_UUID_PORTABLE = UUID(as_uuid=True).with_variant(String(36), "sqlite")
+from app.db.types import GUID
 
 
 class AdminUser(Base):
     __tablename__ = "admin_users"
 
     id: Mapped[uuid.UUID] = mapped_column(
-        _UUID_PORTABLE,
+        GUID(),
         primary_key=True,
         default=uuid.uuid4,
     )

@@ -17,14 +17,15 @@ from sqlalchemy import (
     String,
     func,
 )
-from sqlalchemy.dialects.postgresql import JSONB, UUID
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.base import Base
+from app.db.types import GUID
 
-# Portable UUID + JSON column types — Postgres-native on Postgres, fall back
-# to String(36) / JSON on SQLite so the demo deploy can run without Postgres.
-_UUID_PORTABLE = UUID(as_uuid=True).with_variant(String(36), "sqlite")
+# Portable JSON column — Postgres uses native JSONB; SQLite (demo fallback)
+# uses generic JSON. UUID is handled by the GUID TypeDecorator in db/types.py
+# (with_variant alone doesn't translate bound parameter values, only DDL).
 _JSON_PORTABLE = JSONB().with_variant(JSON(), "sqlite")  # type: ignore[no-untyped-call]
 
 
@@ -40,7 +41,7 @@ class Order(Base):
     __tablename__ = "orders"
 
     id: Mapped[uuid.UUID] = mapped_column(
-        _UUID_PORTABLE,
+        GUID(),
         primary_key=True,
         default=uuid.uuid4,
     )
