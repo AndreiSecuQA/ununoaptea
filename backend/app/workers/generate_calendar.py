@@ -75,12 +75,6 @@ async def generate_calendar_task(order_id: UUID) -> None:
             order.generated_at = datetime.now(UTC)
             order.last_error = None
             await session.commit()
-
-            token = create_download_token(order.id, order.email)
-            download_url = (
-                f"{settings.FRONTEND_URL}/orders/{order.id}/download?token={token}"
-            )
-            await send_calendar_ready(order.email, order.first_name, download_url)
             log.info(
                 "worker.done",
                 order_id=str(order_id),
@@ -104,3 +98,20 @@ async def generate_calendar_task(order_id: UUID) -> None:
                     order_id=str(order_id),
                     error=str(mail_err),
                 )
+            return
+
+        # Email is best-effort — a misconfigured RESEND_API_KEY shouldn't roll
+        # back a successful PDF generation. The order is already marked READY
+        # and its download URL is exposed via /orders/{id}/status.
+        try:
+            token = create_download_token(order.id, order.email)
+            download_url = (
+                f"{settings.FRONTEND_URL}/orders/{order.id}/download?token={token}"
+            )
+            await send_calendar_ready(order.email, order.first_name, download_url)
+        except Exception as mail_err:
+            log.warning(
+                "worker.ready_email_failed",
+                order_id=str(order_id),
+                error=str(mail_err),
+            )

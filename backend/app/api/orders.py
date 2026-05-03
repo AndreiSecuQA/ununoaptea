@@ -75,7 +75,10 @@ async def create_order(
         background_tasks.add_task(generate_calendar_task, order.id)
         log.info("orders.demo_created", order_id=str(order.id))
 
-        demo_url = f"{settings.FRONTEND_URL}/orders/{order.id}/status"
+        # Return a *relative* URL so the browser stays on its current origin.
+        # FRONTEND_URL on Railway is often unset (defaults to localhost) which
+        # would redirect the user to a 127.0.0.1 page on their machine.
+        demo_url = f"/orders/{order.id}/status"
         return OrderCreateResponse(order_id=order.id, checkout_url=demo_url)
 
     # ------------------------------------------------------------------
